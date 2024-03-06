@@ -81,8 +81,11 @@ class AobaChatServer(socket.socket):
             (client_socket, _) = self.accept()
             
             # Get the registration from the client socket.
-            registration = client_socket.recv(BUFFER_SIZE).decode()
-            jsonResult = json.loads(registration) 
+            registration = client_socket.recv(BUFFER_SIZE)
+            if registration == '':
+                break
+            
+            jsonResult = json.loads(registration.decode()) 
 
             # After decoding json, check to see if the action is connect, and then proceed with registration
             if("action" in jsonResult and "username" in jsonResult):
