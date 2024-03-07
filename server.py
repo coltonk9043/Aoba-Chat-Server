@@ -78,15 +78,15 @@ class AobaChatServer(socket.socket):
 
     def accept_clients(self):
         while True:
-            (client_socket, _) = self.accept()
+            try:
+                (client_socket, _) = self.accept()
 
-            # Get the registration from the client socket.
+                # Get the registration from the client socket.
 
-            registration = client_socket.recv(BUFFER_SIZE).decode()
-            if registration == '' or len(registration) == 0:
-                continue
-            else:
-                try:
+                registration = client_socket.recv(BUFFER_SIZE).decode()
+                if registration == '' or len(registration) == 0:
+                    continue
+                else:
                     jsonResult = json.loads(registration) 
 
                     # After decoding json, check to see if the action is connect, and then proceed with registration
@@ -106,8 +106,8 @@ class AobaChatServer(socket.socket):
                     #Receiving data from client
                     newThread = threading.Thread(target = self.recieve, args=(client_socket,)) 
                     newThread.start()
-                except Exception as ex:
-                    logging.error("Ignoring bad request.")
+            except Exception as ex:
+                logging.error("Ignoring bad request.")
 
     def recieve(self, client):
         user = self.client_names[client]
