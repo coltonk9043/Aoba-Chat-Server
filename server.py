@@ -112,8 +112,8 @@ class AobaChatServer(socket.socket):
     def recieve(self, client):
         user = self.client_names[client]
 
-        try:
-            while 1:
+        while 1:
+            try:
                 data = client.recv(BUFFER_SIZE).decode()
                 if data == '' or len(data) == 0:
                     break
@@ -131,9 +131,12 @@ class AobaChatServer(socket.socket):
                             client.send(encode(json.dumps({ 'user': "SERVER", 'message' : "You cannot send commands in global silly!"}, ensure_ascii=False)))
                         else:
                             self.broadcast(user, send_message)
-        except ConnectionResetError as e:
-            if user is not None:
-                logging.info("Connection reset for user: " + user)
+            except ConnectionResetError:
+                if user is not None:
+                    logging.info("Connection reset for user: " + user)
+                    break
+            except Exception as ex:
+                logging.error("Exception occured: " + repr(ex))
 
         if user is not None:
             logging.info("Disconnecting " + user + " from the server.")
