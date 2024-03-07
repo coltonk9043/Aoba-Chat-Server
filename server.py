@@ -79,43 +79,47 @@ class AobaChatServer(socket.socket):
     def accept_clients(self):
         while True:
             (client_socket, _) = self.accept()
-            
+
             # Get the registration from the client socket.
-            registration = client_socket.recv(BUFFER_SIZE)
-            if registration == '':
-                break
-            
-            jsonResult = json.loads(registration.decode()) 
 
-            # After decoding json, check to see if the action is connect, and then proceed with registration
-            if("action" in jsonResult and "username" in jsonResult):
-                if(jsonResult["action"] == "connect"):
-                    self.client_sockets.append(client_socket) #Adding client to clients list
-                    name = jsonResult["username"]
-                    self.client_names[client_socket] = name
-
-                    logging.info("Accepted connection from client address: " + client_socket.getsockname()[0])
-                    logging.info("Connection to client established, waiting to receive messages from user '" + name + "'...")
-                else:
-                    client_socket.send(encode(json.dumps({ 'user': 'SERVER','message' : "400 Invalid registration"}, ensure_ascii=False)))
+            registration = client_socket.recv(BUFFER_SIZE).decode()
+            if registration == '' or len(registration) == 0:
+                continue
             else:
-                client_socket.send(encode(json.dumps({ 'user': 'SERVER','message' : "400 Invalid registration"}, ensure_ascii=False)))
+                try:
+                    jsonResult = json.loads(registration) 
 
-            #Receiving data from client
-            newThread = threading.Thread(target = self.recieve, args=(client_socket,)) 
-            newThread.start()
+                    # After decoding json, check to see if the action is connect, and then proceed with registration
+                    if("action" in jsonResult and "username" in jsonResult):
+                        if(jsonResult["action"] == "connect"):
+                            self.client_sockets.append(client_socket) #Adding client to clients list
+                            name = jsonResult["username"]
+                            self.client_names[client_socket] = name
+
+                            logging.info("Accepted connection from client address: " + client_socket.getsockname()[0])
+                            logging.info("Connection to client established, waiting to receive messages from user '" + name + "'...")
+                        else:
+                            client_socket.send(encode(json.dumps({ 'user': 'SERVER','message' : "400 Invalid registration"}, ensure_ascii=False)))
+                    else:
+                        client_socket.send(encode(json.dumps({ 'user': 'SERVER','message' : "400 Invalid registration"}, ensure_ascii=False)))
+
+                    #Receiving data from client
+                    newThread = threading.Thread(target = self.recieve, args=(client_socket,)) 
+                    newThread.start()
+                except Exception as ex:
+                    logging.error("Ignoring bad request.")
 
     def recieve(self, client):
         user = self.client_names[client]
 
         try:
             while 1:
-                data = client.recv(BUFFER_SIZE)
-                if data == '':
+                data = client.recv(BUFFER_SIZE).decode()
+                if data == '' or len(data) == 0:
                     break
 
                 #Message Received
-                jsonResult = json.loads(data.decode()) 
+                jsonResult = json.loads(data) 
                 if("action" in jsonResult):
                     if(jsonResult["action"] == "disconnect"):
                         break
@@ -129,16 +133,19 @@ class AobaChatServer(socket.socket):
                             self.broadcast(user, send_message)
         except ConnectionResetError as e:
             if user is not None:
-                logging.info("Disconnecting " + user + " from the server.")
-                self.client_sockets.remove(client)
-                self.client_names.pop(user, 0)
-                client.close()
-            
-    def broadcast(self, user, message):
-        #Sending message to all clients
-        for client in self.client_sockets:
-            client.send(encode(json.dumps({ 'user': user, 'message' : message}, ensure_ascii=False)))
+                logging.info("Connection reset for user: " + user)
 
+        if user is not None:
+            logging.info("Disconnecting " + user + " from the server.")
+            self.client_sockets.remove(client)
+            self.client_names.pop(user, 0)
+            client.close()
+
+    def broadcast(self, user, message):
+        if len(message) != 0 and message != '':
+            #Sending message to all clients
+            for client in self.client_sockets:
+                client.send(encode(json.dumps({ 'user': user, 'message' : message}, ensure_ascii=False)))
 
 def main():
     server = AobaChatServer()
