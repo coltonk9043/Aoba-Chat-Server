@@ -68,7 +68,7 @@ class AobaChatServer(socket.socket):
         logging.info("Waiting for incoming client connections...")
         try:
             self.accept_clients()
-        except KeyboardInterupt as interupt:
+        except KeyboardInterrupt as interupt:
             logging.info("Received interupt")
         except Exception as ex:
             logging.error(repr(ex))
