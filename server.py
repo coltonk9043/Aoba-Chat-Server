@@ -68,6 +68,8 @@ class AobaChatServer(socket.socket):
         logging.info("Waiting for incoming client connections...")
         try:
             self.accept_clients()
+        except KeyboardInterupt as interupt:
+            logging.info("Received interupt")
         except Exception as ex:
             logging.error(repr(ex))
         finally:
@@ -98,14 +100,14 @@ class AobaChatServer(socket.socket):
 
                             logging.info("Accepted connection from client address: " + client_socket.getsockname()[0])
                             logging.info("Connection to client established, waiting to receive messages from user '" + name + "'...")
+
+                            #Receiving data from client
+                            newThread = threading.Thread(target = self.recieve, args=(client_socket,)) 
+                            newThread.start()
                         else:
                             client_socket.send(encode(json.dumps({ 'user': 'SERVER','message' : "400 Invalid registration"}, ensure_ascii=False)))
                     else:
                         client_socket.send(encode(json.dumps({ 'user': 'SERVER','message' : "400 Invalid registration"}, ensure_ascii=False)))
-
-                    #Receiving data from client
-                    newThread = threading.Thread(target = self.recieve, args=(client_socket,)) 
-                    newThread.start()
             except Exception as ex:
                 logging.error("Ignoring bad request.")
 
